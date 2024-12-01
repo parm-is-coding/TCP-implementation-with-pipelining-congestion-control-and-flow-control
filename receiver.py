@@ -95,40 +95,40 @@ def sendACK(seqNumber, ackNumber, ip,dPort,SYN=False, FIN=False):
     else:
         ackPacket = makeTCP_Header(b"", seqNumber, ackNumber, dPort,SYN=SYN, ACK=True, FIN=FIN)
     ackPacket = cruptMessage(ackPacket)
-    receiverSocket.sendto(ackPacket, (ip,dPort))
+    if (not isPacketLost()):
+        receiverSocket.sendto(ackPacket, (ip,dPort))
 
 def handleConnection():
-    global isConnected, endtimer, isFinReceived, expectedSeqNumber, receiverBuffer, receivedData, availableBuffer,isFinished,lastSeq, clientAddress
+    global isConnected, endtimer, isFinReceived, expectedSeqNumber, receiverBuffer, receivedData, availableBuffer,isFinished,lastSeq
     while not isFinished or  time.time() - endtimer < 5:
         try:
             packet, address = receiverSocket.recvfrom(2048)
             sPort, dPort, seqNumber, ackNumber, flags, recBuf, checksum, data, is_SYN, is_ACK, is_FIN = parse_Header(packet)
-            if (not isPacketLost()):
-                isNotCrupt = checkCrupt(sPort, dPort, seqNumber, ackNumber, flags, recBuf, checksum, data)
-                if isNotCrupt:
-                    ip = address[0]
-                    if is_FIN:
-                        isFinReceived = True
-                        lastSeq = seqNumber + len(data)
-                    if is_SYN:  # Handle connection setup
-                        sendACK(0, 1,ip,sPort, SYN=True)
-                    elif seqNumber == expectedSeqNumber:  # Handle in-order data
-                        receivedData.extend(data)
-                        expectedSeqNumber += len(data)
-                        # Check for buffered out-of-order packets
-                        while expectedSeqNumber in receiverBuffer:
-                            tempdata = receiverBuffer.pop(expectedSeqNumber)
-                            receivedData.extend(tempdata)
-                            expectedSeqNumber += len(tempdata)
-                            availableBuffer = availableBuffer + len(tempdata)
-                        sendACK(seqNumber, expectedSeqNumber,ip,sPort)
-                    elif seqNumber > expectedSeqNumber:  # Out-of-order packet
-                        if seqNumber not in receiverBuffer:
-                            receiverBuffer[seqNumber] = data
-                            availableBuffer = availableBuffer - len(data)
-                        sendACK(seqNumber, expectedSeqNumber,ip,sPort)
-                    elif seqNumber < expectedSeqNumber:
-                        sendACK(seqNumber, expectedSeqNumber,ip,sPort)
+            isNotCrupt = checkCrupt(sPort, dPort, seqNumber, ackNumber, flags, recBuf, checksum, data)
+            if isNotCrupt:
+                ip = address[0]
+                if is_FIN:
+                    isFinReceived = True
+                    lastSeq = seqNumber + len(data)
+                if is_SYN:  # Handle connection setup
+                    sendACK(0, 1,ip,sPort, SYN=True)
+                elif seqNumber == expectedSeqNumber:  # Handle in-order data
+                    receivedData.extend(data)
+                    expectedSeqNumber += len(data)
+                    # Check for buffered out-of-order packets
+                    while expectedSeqNumber in receiverBuffer:
+                        tempdata = receiverBuffer.pop(expectedSeqNumber)
+                        receivedData.extend(tempdata)
+                        expectedSeqNumber += len(tempdata)
+                        availableBuffer = availableBuffer + len(tempdata)
+                    sendACK(seqNumber, expectedSeqNumber,ip,sPort)
+                elif seqNumber > expectedSeqNumber:  # Out-of-order packet
+                    if seqNumber not in receiverBuffer:
+                        receiverBuffer[seqNumber] = data
+                        availableBuffer = availableBuffer - len(data)
+                    sendACK(seqNumber, expectedSeqNumber,ip,sPort)
+                elif seqNumber < expectedSeqNumber:
+                    sendACK(seqNumber, expectedSeqNumber,ip,sPort)
 
         except TimeoutError:
             if isFinReceived and time.time() - endtimer > 5:
