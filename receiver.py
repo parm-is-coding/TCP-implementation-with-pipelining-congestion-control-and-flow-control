@@ -5,7 +5,6 @@ import random
 
 # Receiver configuration
 serverPort = 8080
-listeningPort = 58900
 packetsize = 32
 receiverWindowSize = 100
 availableBuffer = 4096
@@ -26,14 +25,14 @@ receiverSocket = socket(AF_INET, SOCK_DGRAM)
 receiverSocket.bind(('', serverPort))
 receiverSocket.settimeout(5)  # Timeout for the receiver
 
-def makeTCP_Header(data, seqNum, ackNum, SYN=False, ACK=False, FIN=False):
-    global listeningPort,serverPort,availableBuffer
+def makeTCP_Header(data, seqNum, ackNum,destPort, SYN=False, ACK=False, FIN=False):
+    global serverPort,availableBuffer
     flags = set_flags(SYN, ACK, FIN)
-    checksum = makeChecksum(data, seqNum, listeningPort, serverPort, flags, availableBuffer,ackNum)
+    checksum = makeChecksum(data, seqNum, destPort, serverPort, flags, availableBuffer,ackNum)
     header = struct.pack(
         '!HHIIHHHH', 
         serverPort,          # Source Port
-        listeningPort,       # Destination Port
+        destPort,       # Destination Port
         seqNum,              # Sequence Number
         ackNum,              # Acknowledgment Number
         (5 << 12) | flags,   # Header length and flags
@@ -90,11 +89,11 @@ def set_flags(syn=False, ack=False, fin=False):
 def sendACK(seqNumber, ackNumber, ip,dPort,SYN=False, FIN=False):
     global lastSeq,isFinished,isFinReceived, endtimer
     if((ackNumber == lastSeq) and isFinReceived ):
-        ackPacket = makeTCP_Header(b"", seqNumber, ackNumber, SYN=SYN, ACK=True, FIN=True)
+        ackPacket = makeTCP_Header(b"", seqNumber, ackNumber,dPort, SYN=SYN, ACK=True, FIN=True)
         isFinished = True
         endtimer = time.time()
     else:
-        ackPacket = makeTCP_Header(b"", seqNumber, ackNumber, SYN=SYN, ACK=True, FIN=FIN)
+        ackPacket = makeTCP_Header(b"", seqNumber, ackNumber, dPort,SYN=SYN, ACK=True, FIN=FIN)
     ackPacket = cruptMessage(ackPacket)
     receiverSocket.sendto(ackPacket, (ip,dPort))
 
