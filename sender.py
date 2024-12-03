@@ -36,8 +36,8 @@ isFinSent = False
 duplicateACK = 0
 startTime = time.time()
 endtimer = 0
-cruptProbablity = 0.001
-lossProbablity = 0.001
+cruptProbablity = 0.01
+lossProbablity = 0.01
 
 congestionWidow = 1
 firstLoss = False

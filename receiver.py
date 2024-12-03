@@ -15,8 +15,8 @@ isConnected = False
 isFinReceived = False
 isFinished = False
 lastSeq = -1
-cruptProbablity = 0.001
-lossProbablity = 0.001
+cruptProbablity = 0.01
+lossProbablity = 0.01
 endtimer = 0
  
 
